@@ -26,16 +26,14 @@ namespace TMS.Application.Services.Accounts
                 DateOfBirth = dto.DateOfBirth
             };
 
-            // هناك قيد على الرصيد يمنع الصفر لذلك جعلته 1
             var account = new Account
             {
                 Person = person,
                 Number = DateTime.Now.Ticks.ToString()[^10..],
                 Password = dto.Password,
-                Balance = 1,
+                Balance = 0,
                 IsActive = true,
-                CreatedAt = DateTime.Now,
-               // CreatedByUserId = null
+                CreatedAt = DateTime.Now
             };
 
             return await _repo
@@ -125,6 +123,16 @@ namespace TMS.Application.Services.Accounts
                 Phone = account.Person?.Phone,
                 DateOfBirth = account.Person?.DateOfBirth ?? DateTime.Now
             };
+        }
+
+        public async Task<AccountDTO?> GetByNumberAsync(string number)
+        {
+            var account = await _repo
+                .GetByNumberAsync(number);
+
+            return account is null
+                ? null
+                : MapToDTO(account);
         }
 
     }

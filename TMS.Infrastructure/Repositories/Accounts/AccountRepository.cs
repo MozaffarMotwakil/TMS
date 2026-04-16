@@ -19,16 +19,27 @@ namespace TMS.Infrastructure.Repositories.Accounts
         {
             if (account is null || account.Person is null) return -1;
 
-            await _context.People
-                .AddAsync(account.Person);
+            using var transaction = _context.Database.BeginTransaction();
 
-            account.PersonId = account.Person.Id;
+            try
+            {
+                await _context.People
+                    .AddAsync(account.Person);
 
-            await _context.Accounts
-                .AddAsync(account);
+                account.PersonId = account.Person.Id;
 
-            await _context
-                .SaveChangesAsync();
+                await _context.Accounts
+                    .AddAsync(account);
+
+                await _context
+                    .SaveChangesAsync();
+
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback(); 
+            }
 
             return account.Id;
         }
@@ -37,19 +48,34 @@ namespace TMS.Infrastructure.Repositories.Accounts
         {
             if (account is null || account.Person is null) return false;
 
-            _context.People
-                .Update(account.Person);
+            using var transaction = _context.Database.BeginTransaction();
 
-            _context.Accounts
-                .Update(account);
+            try
+            {
+                _context.People
+                    .Update(account.Person);
 
-            return await _context
-                .SaveChangesAsync() > 0;
+                _context.Accounts
+                    .Update(account);
+
+                var result = await _context
+                    .SaveChangesAsync() > 0;
+
+                transaction.Commit();
+                return result;
+            }
+            catch
+            {
+                transaction.Rollback();
+                return false;
+            }
         }
 
         public async Task<bool> DeleteAsync(Account account)
         {
             if (account is null || account.Person is null) return false;
+
+            using var transaction = _context.Database.BeginTransaction();
 
             try
             {
@@ -59,11 +85,15 @@ namespace TMS.Infrastructure.Repositories.Accounts
                 _context.Accounts
                     .Remove(account);
 
-                return await _context
+                var result = await _context
                     .SaveChangesAsync() > 0;
+
+                transaction.Commit();
+                return result;
             }
             catch
             {
+                transaction.Rollback();
                 return false;
             }
         }
@@ -72,6 +102,7 @@ namespace TMS.Infrastructure.Repositories.Accounts
         {
             return await _context.Accounts
                 .Include(a => a.Person)
+                .Include(a => a.TransactionEntries)
                 .FirstOrDefaultAsync(a => a.Id == id);
         }
 
@@ -79,6 +110,7 @@ namespace TMS.Infrastructure.Repositories.Accounts
         {
             return await _context.Accounts
                 .Include(a => a.Person)
+                .Include(a => a.TransactionEntries)
                 .ToListAsync();
         }
 
@@ -106,6 +138,14 @@ namespace TMS.Infrastructure.Repositories.Accounts
 
             return await _context
                 .SaveChangesAsync() > 0;
+        }
+
+        public async Task<Account?> GetByNumberAsync(string number)
+        {
+            return await _context.Accounts
+                .Include(a => a.Person)
+                .Include(a => a.TransactionEntries)
+                .FirstOrDefaultAsync(a => a.Number == number);
         }
 
     }

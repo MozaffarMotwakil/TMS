@@ -11,6 +11,7 @@ namespace TMS.Application.Interfaces.Accounts
         Task<bool> ActivateAsync(Account account, bool activate);
         Task<bool> ChangePasswordAsync(Account account, string newPassword);
         Task<Account?> GetByIdAsync(int id);
+        Task<Account?> GetByNumberAsync(string number);
         Task<IEnumerable<Account>> GetAllAsync();
     }
 }
