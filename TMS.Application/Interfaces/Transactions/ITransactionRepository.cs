@@ -11,17 +11,16 @@ namespace TMS.Application.Interfaces.Transactions
 {
     public interface ITransactionRepository
     {
-        public Task<int> AddAsync(Transaction Transaction);
 
         public Task<Transaction?> GetByIdAsync(int Id);
 
         public Task<IEnumerable<Transaction>> GetAllAsync();
 
-        public Task<bool> DepositAsync(string AccountNumber, decimal Amount);
+        public Task<int?> DepositAsync(string AccountNumber, decimal Amount);
 
-        public Task<bool> WithdrawAsync(string AccountNumber, decimal Amount);
+        public Task<int?> WithdrawAsync(string AccountNumber, decimal Amount);
 
-        public Task<bool> TransferAsync(string FromAccountNumber, string ToAccountNumber, decimal Amount);
+        public Task<int?> TransferAsync(string FromAccountNumber, string ToAccountNumber, decimal Amount);
 
     }
 }

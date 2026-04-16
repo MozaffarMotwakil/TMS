@@ -20,11 +20,6 @@ namespace TMS.Infrastructure.Repositories.TransactionEntries
             _Context = Context;
         }
 
-        public async Task<int> AddTransactionEntryAsync(TransactionEntry transactionEntry)
-        {
-            await _Context.TransactionEntries.AddAsync(transactionEntry);
-            return transactionEntry.Id;    
-        }
 
         public async Task<IEnumerable<TransactionEntry>> GetAllAsync()
         {

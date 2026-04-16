@@ -38,17 +38,17 @@ namespace TMS.Application.Services.Transactions
                 ? null : MapToDTO(transaction);
         }
 
-        public Task<bool> TransferAsync(string FromAccountNumber, string ToAccountNumber, decimal Amount)
+        public Task<int?> TransferAsync(string FromAccountNumber, string ToAccountNumber, decimal Amount)
         {
             return _repo.TransferAsync(FromAccountNumber, ToAccountNumber, Amount);
         }
 
-        public async Task<bool> DepositAsync(string AccountNumber, decimal Amount)
+        public async Task<int?> DepositAsync(string AccountNumber, decimal Amount)
         {
             return await _repo.DepositAsync(AccountNumber, Amount);
         }
 
-        public async Task<bool> WithdrawAsync(string AccountNumber, decimal Amount)
+        public async Task<int?> WithdrawAsync(string AccountNumber, decimal Amount)
         {
             return await _repo.WithdrawAsync(AccountNumber, Amount);
         }

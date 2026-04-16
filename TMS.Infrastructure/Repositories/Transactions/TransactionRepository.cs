@@ -26,14 +26,6 @@ namespace TMS.Infrastructure.Repositories.Transactions
             _Context = context;
         }
 
-        public async Task<int> AddAsync(Transaction transaction)
-        {
-            await _Context.Transactions.AddAsync(transaction);
-           await _Context.SaveChangesAsync();
-            return transaction.Id;
-
-        }
-
         public async Task<IEnumerable<Transaction>> GetAllAsync()
         {
             return await _Context.Transactions.ToListAsync();
@@ -45,35 +37,56 @@ namespace TMS.Infrastructure.Repositories.Transactions
             return await _Context.Transactions.FindAsync(Id);
 
         }
+        
+        private async Task<int> _AddTransactionAsync(TransactionType Type, decimal Amount)
+        {
+            var NewTransaction = new Transaction()
+            {
+                Type = Type,
+                Amount = Amount,
+                Date = DateTime.Now
+            };
+            await _Context.Transactions.AddAsync(NewTransaction);
 
-        public async Task<bool> TransferAsync(string FromAccountNumber, string ToAccountNumber, decimal Amount)
+            return NewTransaction.Id;
+        }
+
+        private async Task<int> _AddEntryAsync(EntryType Type, int TransactionId, int AccountId)
+        {
+            var NewEntry = new TransactionEntry()
+            {
+                EntryType = Type,
+                TransactionId = TransactionId,
+                AccountId = AccountId
+            };
+            await _Context.TransactionEntries.AddAsync(NewEntry);
+
+            return NewEntry.Id;
+        }
+
+        public async Task<int?> TransferAsync(string FromAccountNumber, string ToAccountNumber, decimal Amount)
         {
             
             using var transaction = await _Context.Database.BeginTransactionAsync();
-
+            int? NewTransactionId = null;
             try
             {
                 var FromAccount = await _GetAccountAsync(FromAccountNumber);
                 if (FromAccount is null)
                 {
                     await transaction.RollbackAsync();
-                    return false;// Error invalid FromAccountNumber
+                    return null;// Error invalid FromAccountNumber
                 }
                 
                 var ToAccount = await _GetAccountAsync(ToAccountNumber);
                 if (ToAccount is null)
                 {
                     await transaction.RollbackAsync();
-                    return false;// Error invalid ToAccountNumber
+                    return null;// Error invalid ToAccountNumber
                 }
 
-                if (await _WithdrawalHelperAsync(FromAccount, Amount))
-                {
-                    await transaction.RollbackAsync();
-                    return false;// Error insufficient Balance
-                }
 
-                await _DepositHelperAsync(ToAccount, Amount);
+                 NewTransactionId = await _TransferHelper(FromAccount, ToAccount, Amount);
 
 
                 await _Context.SaveChangesAsync();
@@ -83,15 +96,16 @@ namespace TMS.Infrastructure.Repositories.Transactions
             catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return false;
+                return null;
             }
-            return true;
+
+            return NewTransactionId;
         }
 
-        public async Task<bool> WithdrawAsync(string AccountNumber, decimal Amount)
+        public async Task<int?> WithdrawAsync(string AccountNumber, decimal Amount)
         {
             using var transaction = await _Context.Database.BeginTransactionAsync();
-
+            int? NewTransactionId = null;
             try
             {
                
@@ -99,13 +113,14 @@ namespace TMS.Infrastructure.Repositories.Transactions
                 if (Account is null)
                 {
                     await transaction.RollbackAsync();
-                    return false;// Error invalid accountNumber
+                    return null;// Error invalid accountNumber
                 }
 
-                if (await _WithdrawalHelperAsync(Account, Amount))
+                NewTransactionId = await _WithdrawalHelperAsync(Account, Amount);
+                if (NewTransactionId is null)
                 {
                     await transaction.RollbackAsync();
-                    return false;// Error insufficient Balance
+                    return null;// Error insufficient Balance or Amount < 0
                 }
 
                 await _Context.SaveChangesAsync();
@@ -115,15 +130,16 @@ namespace TMS.Infrastructure.Repositories.Transactions
             catch (Exception)
             {
                 await transaction.RollbackAsync();
-                return false;
+                return null;
             }
 
-            return true;
+            return NewTransactionId;
         }
 
-        public async Task<bool> DepositAsync(string AccountNumber, decimal Amount)
+        public async Task<int?> DepositAsync(string AccountNumber, decimal Amount)
         {
             using var transaction = await _Context.Database.BeginTransactionAsync();
+            int? NewTransactionId = null;
 
             try
             {
@@ -131,21 +147,71 @@ namespace TMS.Infrastructure.Repositories.Transactions
                 if (Account is null)
                 {
                     await transaction.RollbackAsync();
-                    return false;
+                    return null;
                 }
 
-                await _DepositHelperAsync(Account, Amount);
-              
+                NewTransactionId = await _DepositHelperAsync(Account, Amount);
+                if (NewTransactionId is null)
+                {
+                    await transaction.RollbackAsync();
+                    return null;// Error Amount < 0
+                }
+
                 await _Context.SaveChangesAsync();
                 await transaction.CommitAsync();
             }
             catch (Exception)
             {
                await transaction.RollbackAsync();
-                return false;
+                return null;
             }
 
-            return true;
+            return NewTransactionId;
+        }
+
+       
+        private async Task<int?> _DepositHelperAsync(Account Account, decimal Amount)
+        {
+            if (Amount < 0)
+                return null;
+
+            Account.Balance += Amount;
+
+           int NewTransactionId = await _AddTransactionAsync(TransactionType.Deposit, Amount);
+
+            await _AddEntryAsync(EntryType.In, NewTransactionId, Account.Id);
+
+            return NewTransactionId;
+        }
+
+        private async Task<int?> _WithdrawalHelperAsync(Account Account, decimal Amount)
+        {
+            if (Account.Balance < Amount || Amount < 0) 
+                return null;
+
+            Account.Balance -= Amount;
+
+            int NewTransactionId = await _AddTransactionAsync(TransactionType.Withdrawal, Account.Id);
+
+            await _AddEntryAsync(EntryType.Out, NewTransactionId, Account.Id);
+
+            return NewTransactionId;
+        }
+
+        private async Task<int?> _TransferHelper(Account FromAccount, Account ToAccount, decimal Amount)
+        {
+            if (Amount < FromAccount.Balance || Amount < 0)
+                return null;
+            
+            FromAccount.Balance -= Amount;
+            ToAccount.Balance += Amount;
+
+            int NewTransactionId = await _AddTransactionAsync(TransactionType.Transfer, Amount);
+            await _AddEntryAsync(EntryType.Out, NewTransactionId, FromAccount.Id);
+            await _AddEntryAsync(EntryType.In, NewTransactionId, ToAccount.Id);
+
+            return NewTransactionId;
+
         }
 
         //TODO: we should replace this func with the one exists in AccountRepo
@@ -155,55 +221,8 @@ namespace TMS.Infrastructure.Repositories.Transactions
 
             return Account;
         }
-        private async Task _DepositHelperAsync(Account Account, decimal Amount)
-        {
-            Account.Balance += Amount;
 
-            var NewTransaction = new Transaction()
-            {
-                Type = TransactionType.Deposit,
-                Amount = Amount,
-                Date = DateTime.Now
-            };
-            await _Context.Transactions.AddAsync(NewTransaction);
 
-            var NewEntry = new TransactionEntry()
-            {
-                EntryType = EntryType.In,
-                TransactionId = NewTransaction.Id,
-                AccountId = Account.Id
-            };
-            await _Context.TransactionEntries.AddAsync(NewEntry);
-
-        }
-
-        private async Task<bool> _WithdrawalHelperAsync(Account Account, decimal Amount)
-        {
-            if (Account.Balance < Amount)
-                return false;
-
-            Account.Balance -= Amount;
-
-            var NewTransaction = new Transaction()
-            {
-                Type = TransactionType.Withdrawal,
-                Amount = Amount,
-                Date = DateTime.Now
-            };
-            await _Context.Transactions.AddAsync(NewTransaction);
-
-            var NewEntry = new TransactionEntry()
-            {
-                EntryType = EntryType.Out,
-                TransactionId = NewTransaction.Id,
-                AccountId = Account.Id
-            };
-            await _Context.TransactionEntries.AddAsync(NewEntry);
-
-            return true;
-        }
-
-        
     }
 
 }

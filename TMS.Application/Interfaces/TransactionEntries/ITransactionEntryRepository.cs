@@ -12,8 +12,6 @@ namespace TMS.Application.Interfaces.TransactionEntries
 {
     public interface ITransactionEntryRepository
     {
-        public Task<int> AddTransactionEntryAsync(TransactionEntry Entry);
-
         public Task<TransactionEntry?> GetByIdAsync(int Id);
 
         public Task<IEnumerable<TransactionEntry>> GetAllAsync();
