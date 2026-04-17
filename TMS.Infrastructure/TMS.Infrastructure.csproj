@@ -7,12 +7,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Configurations\Accounts\" />
     <Folder Include="Configurations\TransactionEntries\" />
     <Folder Include="Configurations\Transactions\" />
-    <Folder Include="Configurations\Users\" />
     <Folder Include="Repositories\Accounts\" />
+
     <Folder Include="Repositories\Users\" />
+
+    <Folder Include="Configurations\Users\" />
+    <Folder Include="Repositories\TransactionEntries\" />
+    <Folder Include="Repositories\Transactions\" />
   </ItemGroup>
 
   <ItemGroup>

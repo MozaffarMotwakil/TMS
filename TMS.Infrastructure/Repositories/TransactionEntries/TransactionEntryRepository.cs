@@ -8,6 +8,7 @@ using Microsoft.Identity.Client;
 using TMS.Application.DTOs.TransactionEntries;
 using TMS.Application.Interfaces.TransactionEntries;
 using TMS.Domain.Entities.TransactionEntries;
+using TMS.Domain.Enums.TransactionEntries;
 using TMS.Domain.Enums.Transactions;
 using TMS.Infrastructure.Persistence;
 
@@ -42,6 +43,19 @@ namespace TMS.Infrastructure.Repositories.TransactionEntries
         public async Task<TransactionEntry?> GetByIdAsync(int Id)
         {
             return await _Context.TransactionEntries.FindAsync(Id);
+        }
+
+        public async Task<int> AddEntryAsync(EntryType Type, int TransactionId, int AccountId)
+        {
+            var NewEntry = new TransactionEntry()
+            {
+                EntryType = Type,
+                TransactionId = TransactionId,
+                AccountId = AccountId
+            };
+            await _Context.TransactionEntries.AddAsync(NewEntry);
+
+            return NewEntry.Id;
         }
     }
 }
