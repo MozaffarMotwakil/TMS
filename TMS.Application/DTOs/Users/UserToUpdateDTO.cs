@@ -12,7 +12,13 @@ namespace TMS.Application.DTOs.Users
     {
         public int Id { get; set; }
         public string UserName { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;  
+
  
+        // Person Info
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Phone { get; set; }
+        public DateTime DateOfBirth { get; set; }
     }
 }

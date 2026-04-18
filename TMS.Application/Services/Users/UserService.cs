@@ -5,6 +5,8 @@ using System.Text;
 using System.Threading.Tasks;
 using TMS.Application.DTOs.Users;
  using TMS.Application.Interfaces.Users;
+using TMS.Domain.Entities.Accounts;
+using TMS.Domain.Entities.People;
 using TMS.Domain.Entities.Users;
 
 namespace TMS.Application.Services.Users
@@ -20,23 +22,29 @@ namespace TMS.Application.Services.Users
 
         public async Task<int> AddAsync(UserToAddDTO dto)
         {
+            // Add Person Info
+            var person = new Person
+            {
+                FirstName = dto.FirstName,
+                LastName = dto.LastName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                DateOfBirth = dto.DateOfBirth
+            };
+
+            // Add User Info
             var user = new User
             {
+                Person = person,// we take it from the person we just created, we dont take it from the dto because we want to create a new person and link it to the user, if we take it from the dto it will be ignored and we will create a new person anyway, so we might as well take it from the person we just created
+                PersonId = person.Id,  
                 UserName = dto.UserName,
                 Password = dto.Password,
-                PersonId = dto.PersonId,
-
+                
                 //add fixed current user id for now, later we will get it from the token
                 CreatedByUserId = 9,
-
                 // we dont take the crated at because we want it to be set to the current time when we create the user, we can take it from the dto but it will be ignored and overridden by the current time
                 CreatedAt = DateTime.Now,
-
-                Person = null!, // will be set by EF Core when we save changes, we just need to set the foreign key (PersonId)             
-             
-                CreatedByUser = null! // will be set by EF Core when we save changes, we just need to set the foreign key (CreatedByUserId)
-
-
+                CreatedByUser = null!, // will be set by EF Core when we save changes, we just need to set the foreign key (CreatedByUserId)
             };
 
             return await _repo.AddAsync(user);
@@ -46,12 +54,16 @@ namespace TMS.Application.Services.Users
         {
             var user = await _repo.GetByIdAsync(dto.Id);
 
-            if (user is null)
+            if (user is null || user.Person is null)
             {
                 return false;
             }
-            user.UserName = dto.UserName;
-            user.Password = dto.Password; 
+            user.UserName = dto.UserName; 
+            user.Person.FirstName = dto.FirstName;
+            user.Person.LastName = dto.LastName;
+            user.Person.Email = dto.Email;
+            user.Person.Phone = dto.Phone;
+            user.Person.DateOfBirth = dto.DateOfBirth;
 
             return await _repo.UpdateAsync(user);
         }
@@ -81,13 +93,18 @@ namespace TMS.Application.Services.Users
         {
             return new UserDTO
             {
+                // User Info
+
                 Id = user.Id,
-                UserName = user.UserName,               
-                CreatedByUserId = user.CreatedByUserId,
+                UserName = user.UserName,                            
                 CreatedByUserName = user.CreatedByUser.UserName,
-                PersonId = user.PersonId,
-                PersonFullName = user.Person.FirstName + " " + user.Person.LastName,
-                CreatedAt = user.CreatedAt
+
+                // Person Info
+                FirstName = user.Person.FirstName,
+                LastName = user.Person.LastName,
+                Email = user.Person.Email,
+                Phone = user.Person.Phone,
+                DateOfBirth = user.Person.DateOfBirth
             };
         }
 

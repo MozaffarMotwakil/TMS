@@ -4,24 +4,26 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TMS.Application.DTOs.People;
 using TMS.Domain.Entities.People;
 using TMS.Domain.Entities.Users;
 
 namespace TMS.Application.DTOs.Users
 {
-    public class    UserToAddDTO
-    {           
-        [Required]
-        [StringLength(50, MinimumLength = 3)]
-        public string UserName { get; set; } = string.Empty;
-
-        [Required]
-        [MinLength(3)]
+    public class UserToAddDTO
+    {             
+        // User Info
+        public string UserName { get; set; } = string.Empty;     
         public string Password { get; set; } = string.Empty;
-        [Required]
-        [Range(1, int.MaxValue, ErrorMessage = "Please select a valid Person.")]
-        public int PersonId { get; set; }
+        public string ConfirmPassword { get; set; } = string.Empty;
 
+
+        // Person Info
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? Phone { get; set; }
+        public DateTime DateOfBirth { get; set; }
 
     }
 }
